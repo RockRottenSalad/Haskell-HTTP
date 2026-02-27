@@ -1,25 +1,25 @@
 {-# LANGUAGE LambdaCase #-}
 module Parser where
 
---import Data.Maybe
 import Control.Monad
 import Control.Applicative
 import Data.Char (isSpace)
 import Data.Functor
 
+-- Either with parser error would be better than a maybe, but this will have to do for now
 newtype Parser a = Parser { parse :: String -> Maybe (a, String) }
 
 instance Functor Parser where
-    fmap f (Parser g) = do
-        Parser $ g >=> \(y, x') -> return (f y, x')
+    fmap f (Parser g) =
+            Parser $ g >=> \(y, x') -> return (f y, x')
 
 instance Applicative Parser where
     pure y = Parser $ \x -> Just (y, x)
     (Parser f) <*> (Parser g) =
         Parser $ \x -> do
         (h, x') <- f x
-        (y', x'') <- g x'
-        return (h y', x'')
+        (y, x'') <- g x'
+        return (h y, x'')
 
 instance Alternative Parser where
     empty = Parser $ const Nothing
@@ -56,8 +56,16 @@ parseSpan predicate = Parser $ \x -> let
 parseWhiteSpace :: Parser String
 parseWhiteSpace = parseSpan isSpace
 
+parseOrDefault :: a -> Parser a -> Parser a
+parseOrDefault defaultValue (Parser f) = Parser $ \x -> do
+                                        case f x of
+                                            Just v -> Just v
+                                            Nothing -> Just (defaultValue, x)
+
 -- Leading seperator means the sep comes before the element, i.e. ,4,1,2
 -- or, more realistically: /home/user/directory/example
-parseByLeadingSeperator :: Parser a -> Parser b -> Parser [b]
-parseByLeadingSeperator seperator element = some (seperator *> element) <|> seperator $> []
+-- BUG: /home/ <- last / is not parsed, tmp fix has been placed
+-- Bounded constraint is a placeholder until better solution is found for the aforementioned bug 
+parseByLeadingSeperator :: Bounded a => Parser a -> Parser b -> Parser [b]
+parseByLeadingSeperator seperator element = seperator *> some (element <* parseOrDefault minBound seperator) <|> seperator $> []
 

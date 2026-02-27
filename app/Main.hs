@@ -3,9 +3,10 @@ module Main where
 import Data.Char (ord)
 import Network.Simple.TCP
 import qualified Data.ByteString.Internal as BI
+import qualified Data.ByteString as BS
 import HTTP.Request
+import HTTP.Response
 import Parser
-
 
 main :: IO()
 main = do
@@ -16,16 +17,17 @@ main = do
         case input of
             Nothing -> putStrLn "Couldn't receive input"
             Just x -> do
-                -- Fancy prints it which is bad.
-                -- Either just fold the damn thing into string
-                -- or better yet; make parser use bytestring <- should be pretty easy to do in <30 mins
-                let x' = show x
+                let x' = map BI.w2c $ BS.unpack x
                 let parsed = parse p x'
                 print $ map ord x'
+                print x'
                 case parsed of
                     Nothing -> send sock (BI.packChars ("Failed to parse: " ++ x')) >> print ("Failed to parse: " ++ x')
                     Just (req, _) -> do
-                        let req' = BI.packChars $ show req
-                        send sock req' >> print (parse p (show req))
-    return()
+                        let response = setContents ("Your HTTP request: <br>" ++ show req) defaultResponse 
+                        let responsePacked = packResponse response
+                        print $ show req
+                        print responsePacked
+                        send sock responsePacked
+    return ()
 
