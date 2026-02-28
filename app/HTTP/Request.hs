@@ -14,7 +14,7 @@ import qualified Data.ByteString as BS
 import JSON.JParser
 
 -- Add the rest later
-data Method = POST | GET deriving Show
+data Method = POST | GET deriving (Show, Eq)
 
 type QueryParameter = (BS.ByteString, BS.ByteString)
 
@@ -26,6 +26,9 @@ data Request = Request
     ,    getHeaders :: [Header]
     ,    contents   :: Contents
     } deriving (Show)
+
+extractPath :: Request -> String
+extractPath req = map BI.w2c (BS.unpack $ BS.concat (getPath req))
 
 parseMethod :: Parser Method
 parseMethod = f <$> alternate (parseSeq "GET") (parseSeq "POST")
