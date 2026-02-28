@@ -6,7 +6,7 @@ module HTTP.Request where
 
 import Data.Char (isSpace, isDigit)
 import Parser
-import Control.Applicative (many)
+import Control.Applicative (many, some)
 import qualified Utils as U
 import HTTP.Common
 import qualified Data.ByteString.Internal as BI
@@ -29,11 +29,17 @@ parseMethod = f <$> alternate (parseSeq "GET") (parseSeq "POST")
 
 -- BUG: What about /path/ <-- Last / fails to parse
 -- Added tmp fix in parseByLeadingSeperator
+--parsePath :: Parser Path
+--parsePath = f <$> parseByLeadingSeperator 
+--                (parseChar '/')
+--                (parseSpan (\x -> (not . isSpace) x && x /= '/'))
+--            where f = map BI.packChars
+
 parsePath :: Parser Path
-parsePath = f <$> parseByLeadingSeperator 
-                (parseChar '/')
-                (parseSpan (\x -> (not . isSpace) x && x /= '/'))
-            where f = map BI.packChars
+parsePath = f <$> some (
+            parseChar '/' *> 
+            parseOrDefault "" (parseSpan (\x -> (not . isSpace) x && x /= '/')))
+            where f = map (\xs -> BI.packChars $ '/' : xs)
 
 parseVersion :: Parser ProtocolVersion
 parseVersion = parseSeq "HTTP/" *> 

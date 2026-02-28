@@ -24,7 +24,8 @@ main = do
                 case parsed of
                     Nothing -> send sock (BI.packChars ("Failed to parse: " ++ x')) >> print ("Failed to parse: " ++ x')
                     Just (req, _) -> do
-                        let response = setContents ("Your HTTP request: <br>" ++ show req) defaultResponse 
+                        let response = defaultResponse 
+                                        {contents = "Your HTTP request: <br>" ++ show req }
                         let responsePacked = packResponse response
                         print $ show req
                         print responsePacked

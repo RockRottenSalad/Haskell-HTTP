@@ -47,6 +47,3 @@ defaultResponse = Response
     ,   contents = "HELLO, WORLD!"
     }
 
-setContents :: String -> Response -> Response
-setContents s r = r { contents = s }
-

@@ -3,7 +3,7 @@ module Parser where
 
 import Control.Monad
 import Control.Applicative
-import Data.Char (isSpace)
+import Data.Char (isSpace, isDigit)
 import Data.Functor
 
 -- Either with parser error would be better than a maybe, but this will have to do for now
@@ -53,8 +53,11 @@ parseSpan predicate = Parser $ \x -> let
                                 then Nothing
                                 else Just (matched, remaining)
 
+parseWhiteSpaceExplicit :: Parser String
+parseWhiteSpaceExplicit = parseSpan isSpace
+
 parseWhiteSpace :: Parser String
-parseWhiteSpace = parseSpan isSpace
+parseWhiteSpace = parseWhiteSpaceExplicit <|> parseNothing
 
 parseOrDefault :: a -> Parser a -> Parser a
 parseOrDefault defaultValue (Parser f) = Parser $ \x -> do
@@ -62,10 +65,40 @@ parseOrDefault defaultValue (Parser f) = Parser $ \x -> do
                                             Just v -> Just v
                                             Nothing -> Just (defaultValue, x)
 
+parseInt :: Parser Int
+parseInt = read <$> parseSpan isDigit
+
+-- Doubles like "3.14"
+parseDoubleExact :: Parser Double
+parseDoubleExact = (\num dec -> read (num ++ '.':dec)) 
+                   <$> parseSpan isDigit
+                   <*> (parseChar '.' *> parseSpan isDigit)
+
+-- Doubles like ".25"
+parseDoubleDecimal :: Parser Double
+parseDoubleDecimal = (\dec -> read ('0':'.':dec))
+                    <$> (parseChar '.' *> parseSpan isDigit)
+
+-- Doubles like "4."
+parseDoubleOmitDecimal :: Parser Double
+parseDoubleOmitDecimal = read <$> (parseSpan isDigit <* parseChar '.')
+
+-- Doubles like "3.14", ".25", "4." or "5"
+parseDouble :: Parser Double
+parseDouble =   parseDoubleExact 
+            <|> parseDoubleDecimal 
+            <|> parseDoubleOmitDecimal 
+            <|> (read <$> parseSpan isDigit)
+
+parseNothing :: Parser String
+parseNothing = Parser $ \x -> Just ("", x)
+
 -- Leading seperator means the sep comes before the element, i.e. ,4,1,2
 -- or, more realistically: /home/user/directory/example
--- BUG: /home/ <- last / is not parsed, tmp fix has been placed
--- Bounded constraint is a placeholder until better solution is found for the aforementioned bug 
-parseByLeadingSeperator :: Bounded a => Parser a -> Parser b -> Parser [b]
-parseByLeadingSeperator seperator element = seperator *> some (element <* parseOrDefault minBound seperator) <|> seperator $> []
+parseByLeadingSeperator :: Parser a -> Parser b -> Parser [b]
+parseByLeadingSeperator seperator element = many (seperator *> element) <|> seperator $> []
+
+-- Trailing seperator means the sep comes after the element, i.e. 4,1,2
+parseByTrailingSeperator :: Parser a -> Parser b -> Parser [b]
+parseByTrailingSeperator seperator element = ((:) <$> element <*> parseByLeadingSeperator seperator element) <|> pure []
 
