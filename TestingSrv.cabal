@@ -64,6 +64,7 @@ executable TestingSrv
     other-modules:
         HTTP.Request, HTTP.Response, HTTP.Common,
         JSON.Common, JSON.JParser,
+        API.Common,
         Parser, Utils
 
     -- LANGUAGE extensions used by modules in this package.

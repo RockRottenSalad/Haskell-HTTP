@@ -30,10 +30,10 @@ parseJsonNumber = JNumber <$> parseDouble
 
 parseJsonArray :: Parser Json
 parseJsonArray = parseChar '[' *> parseWhiteSpace *> array <* parseWhiteSpace <* parseChar ']'
-                where
-                array = JArray <$> parseByTrailingSeperator 
-                            parseJsonCommaSeparator
-                            parseJson
+                 where
+                 array = JArray <$> parseByTrailingSeperator 
+                                    parseJsonCommaSeparator
+                                    parseJson
 
 parseJsonObject :: Parser Json
 parseJsonObject = parseChar '{' *> parseWhiteSpace *> keyValuePairs <* parseWhiteSpace <* parseChar '}'
