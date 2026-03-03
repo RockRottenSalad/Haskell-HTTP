@@ -65,6 +65,7 @@ parseOrDefault defaultValue (Parser f) = Parser $ \x -> do
                                             Just v -> Just v
                                             Nothing -> Just (defaultValue, x)
 
+-- TODO negatives
 parseInt :: Parser Int
 parseInt = read <$> parseSpan isDigit
 
@@ -83,12 +84,18 @@ parseDoubleDecimal = (\dec -> read ('0':'.':dec))
 parseDoubleOmitDecimal :: Parser Double
 parseDoubleOmitDecimal = read <$> (parseSpan isDigit <* parseChar '.')
 
+-- TODO negatives
 -- Doubles like "3.14", ".25", "4." or "5"
 parseDouble :: Parser Double
-parseDouble =   parseDoubleExact 
+parseDouble =  (\isNeg num -> if isNeg then -num else num)
+             <$>
+             ((True <$ parseChar '-') <|> pure False)
+             <*>
+             (parseDoubleExact 
             <|> parseDoubleDecimal 
             <|> parseDoubleOmitDecimal 
-            <|> (read <$> parseSpan isDigit)
+            <|> (read <$> parseSpan isDigit))
+
 
 parseNothing :: Parser String
 parseNothing = Parser $ \x -> Just ("", x)
